@@ -44,9 +44,10 @@
 .myCalendar .rbc-event {
   background-color: #2563eb;
   border: none;
-  padding: 4px;
-  border-radius: 4px;
   color: #f9fafb;
+  border-left: 4px solid currentColor !important;
+  padding-left: 10px !important;
+  border-radius: 0 4px 4px 0;
 }
 
 /* ────────────────────────────────────────────── */
@@ -109,4 +110,23 @@
 }
 .myCalendar .rbc-time-content .rbc-day-slot:last-child {
   border-right: none;
+}
+
+/* make the .rbc-event-content a column layout */
+.myCalendar .rbc-addons-dnd-resizable {
+  display: flex;
+  flex-direction: column;
+
+  /* ensure the two children (time & title) stack vertically */
+}
+
+/* put the title first */
+.myCalendar .rbc-addons-dnd-resizable .rbc-event-label {
+  order: 2;
+  margin-top: 2px;
+}
+
+.myCalendar .rbc-addons-dnd-resizable .rbc-event-content {
+  order: 1;
+  max-height: fit-content;
 }

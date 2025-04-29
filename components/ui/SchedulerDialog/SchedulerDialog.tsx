@@ -79,9 +79,10 @@ export function SchedulerDialog({ onSave }: Props) {
     });
 
   const hasFixed = tasks.some((t) => t.fixed);
-
   const buildAiPrompt = () => {
-    let prompt = `I want you to schedule my week for me.\nHere are my tasks:\n`;
+    let prompt = `I want you to schedule my week for me.
+  Here are my tasks:\n`;
+
     tasks.forEach((t, i) => {
       prompt += `\n${i + 1}. ${t.name}\n`;
       prompt += `   - Times per week: ${t.timesPerWeek}\n`;
@@ -101,38 +102,58 @@ export function SchedulerDialog({ onSave }: Props) {
 
     prompt += `\nPlease place fixed tasks exactly in their windows, and for the rest use my time preferences.\n`;
     prompt += `\nIMPORTANT: “timesPerWeek” = number of occurrences per week. Schedule exactly that many distinct sessions on different days.\n`;
-    prompt += `\nRespond with only valid JSON matching **exactly** this schema (no extra fields):\n\n`;
+    prompt += `\nIMPORTANT: do not schedule any task on top of each other.\n`;
+    prompt += `\nIMPORTANT: treat Sunday as the first day of the week.\n`;
+    prompt += `\nIMPORTANT: only schedule between the hours 08:00 and 22:00.\n`;
+
+    // Define exact bounds for preferences
+    prompt += `\n**Preference windows (exact bounds):**\n`;
+    prompt += `- Morning  = 08:00–11:00\n`;
+    prompt += `- Noon     = 11:00–15:00\n`;
+    prompt += `- Afternoon= 15:00–18:00\n`;
+    prompt += `- Evening  = 18:00–22:00\n`;
+
+    // Placement algorithm description
+    prompt += `\n**Placement algorithm for non-fixed tasks:**\n`;
+    prompt += `1. For each session, look only within its preference window.\n`;
+    prompt += `2. Place it at the earliest available slot (start = window start or immediately after the previous booked session that day).\n`;
+    prompt += `3. If that slot is already taken, shift forward by the session’s duration until you find a free slot in the same window.\n`;
+    prompt += `4. If you run out of room in that window for that day, allow the session to spill into the next preference window on the same day (e.g., Morning → Noon, Noon → Afternoon, Afternoon → Evening), before moving to the next day.\n`;
+    prompt += `5. If all windows on that day are full, move the session to the next valid day in week order.\n`;
+
+    // Validation step
+    prompt += `\n**Validation step (must do before returning):**\n`;
+    prompt += `- Scan every pair of sessions on the same day; if any overlap, shift the later one forward until it no longer overlaps, possibly into the next preference window if needed.\n`;
+    prompt += `- Confirm that every session’s endTime ≤ 22:00 and startTime ≥ 08:00.\n`;
+
+    // Task naming clarification
+    prompt += `\n**Task naming and parsing:**\n`;
+    prompt += `- Each task line starts with an index (e.g. \"1.\") followed by the task name. `;
+    prompt += `Do not include the index or period in the \"name\" field—use only the text after the dot and space, exactly as given.\n`;
+    prompt += `- The \"name\" field may contain letters, numbers, or symbols (e.g. \"42\", \"Task #1\"); preserve it verbatim.\n`;
+
+    // Enforce exact field names
+    prompt += `\n**Field names must match exactly** (no synonyms):\n`;
+    prompt += `- \"name\", \"timesPerWeek\", \"duration\", \"fixed\", \"days\", \"startTime\", \"endTime\", \"preference\", \"notes\"\n`;
+
+    prompt += `\nRespond with **only** valid JSON matching this schema (no extra fields):\n\n`;
     prompt += '```json\n';
     prompt += `{
-`;
-    prompt += `  "schedule": [
-`;
-    prompt += `    {
-`;
-    prompt += `      "name": "string",
-`;
-    prompt += `      "timesPerWeek": number,
-`;
-    prompt += `      "duration": number,
-`;
-    prompt += `      "fixed": boolean,
-`;
-    prompt += `      "days": ["Mon","Tue",...],
-`;
-    prompt += `      "startTime": "HH:MM",
-`;
-    prompt += `      "endTime": "HH:MM",
-`;
-    prompt += `      "preference": "string",
-`;
-    prompt += `      "notes": "string"
-`;
-    prompt += `    }
-`;
-    prompt += `  ]
-`;
-    prompt += `}
-`;
+  `;
+    prompt += `  "schedule": [\n`;
+    prompt += `    {\n`;
+    prompt += `      "name": "string",\n`;
+    prompt += `      "timesPerWeek": number,\n`;
+    prompt += `      "duration": number,\n`;
+    prompt += `      "fixed": boolean,\n`;
+    prompt += `      "days": ["Mon","Tue",...],\n`;
+    prompt += `      "startTime": "HH:MM",\n`;
+    prompt += `      "endTime": "HH:MM",\n`;
+    prompt += `      "preference": "string",\n`;
+    prompt += `      "notes": "string"\n`;
+    prompt += `    }\n`;
+    prompt += `  ]\n`;
+    prompt += `}\n`;
     prompt += '```\n';
 
     return prompt;
@@ -140,6 +161,7 @@ export function SchedulerDialog({ onSave }: Props) {
 
   const handleSave = async () => {
     const aiPrompt = buildAiPrompt();
+    console.log('AI prompt:', aiPrompt);
     const res = await fetch('/api/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -152,10 +174,7 @@ export function SchedulerDialog({ onSave }: Props) {
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button size="lg">Schedule My Week</Button>
-      </DialogTrigger>
-      <DialogContent className="min-w-[60%] max-w-7xl w-full">
+      <DialogContent className="min-w-[70%] max-w-7xl w-full">
         <DialogHeader>
           <DialogTitle>
             Write out what you want to achieve this week
@@ -191,18 +210,26 @@ export function SchedulerDialog({ onSave }: Props) {
 
         {tasks.length > 0 && (
           <div className="overflow-auto mt-6">
-            <table className="w-full min-w-[800px] table-auto border-collapse">
+            <table className="w-full table-fixed border-collapse">
               <thead>
                 <tr className="bg-indigo-50">
-                  <th className="p-2 border text-left w-[300px]">Task name</th>
-                  <th className="p-2 border text-center w-[150px]">Per week</th>
-                  <th className="p-2 border text-center w-[20px]">Duration</th>
-                  <th className="p-2 border text-center w-[10px]">Fixed?</th>
-                  <th className="p-2 border text-center w-[120px]">
+                  <th className="p-2 border text-left w-[100px]">Task name</th>
+                  <th className="p-2 border text-center w-[40px]">Fixed?</th>
+                  {!hasFixed && (
+                    <th className="p-2 border text-center w-[120px]">
+                      Per week
+                    </th>
+                  )}
+                  {!hasFixed && (
+                    <th className="p-2 border text-center w-[80px]">
+                      Duration
+                    </th>
+                  )}
+                  <th className="p-2 border text-center w-[200px]">
                     Days / Preference
                   </th>
                   {hasFixed && (
-                    <th className="p-2 border text-center w-[60px]">
+                    <th className="p-2 border text-center w-[160px]">
                       Start–End
                     </th>
                   )}
@@ -219,46 +246,53 @@ export function SchedulerDialog({ onSave }: Props) {
                         className="w-full"
                       />
                     </td>
-                    <td className="p-2 border text-center">
-                      <Input
-                        type="number"
-                        min={1}
-                        value={task.timesPerWeek}
-                        onChange={(e) =>
-                          updateTask(
-                            i,
-                            'timesPerWeek',
-                            Number(e.target.value) || 1
-                          )
-                        }
-                        className="mx-auto w-16"
-                      />
-                    </td>
-                    <td className="p-2 border text-center">
-                      <Select
-                        value={String(task.duration)}
-                        onValueChange={(v) =>
-                          updateTask(i, 'duration', parseInt(v, 10))
-                        }
-                      >
-                        <SelectTrigger className="mx-auto w-24">
-                          <SelectValue placeholder="30m" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[15, 30, 45, 60, 90, 120].map((m) => (
-                            <SelectItem key={m} value={String(m)}>
-                              {m}m
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
+
                     <td className="p-2 border text-center">
                       <Checkbox
                         checked={task.fixed}
                         onCheckedChange={(c) => updateTask(i, 'fixed', !!c)}
                       />
                     </td>
+                    {!hasFixed && (
+                      <td className="p-2 border text-center">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={task.timesPerWeek}
+                          onChange={(e) =>
+                            updateTask(
+                              i,
+                              'timesPerWeek',
+                              Number(e.target.value) || 1
+                            )
+                          }
+                          className="mx-auto w-16"
+                        />
+                      </td>
+                    )}
+
+                    {!task.fixed && (
+                      <td className="p-2 border text-center">
+                        <Select
+                          value={String(task.duration)}
+                          onValueChange={(v) =>
+                            updateTask(i, 'duration', parseInt(v, 10))
+                          }
+                        >
+                          <SelectTrigger className="mx-auto w-24">
+                            <SelectValue placeholder="30m" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[15, 30, 45, 60, 90, 120].map((m) => (
+                              <SelectItem key={m} value={String(m)}>
+                                {m}m
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                    )}
+
                     <td className="p-2 border text-center">
                       {task.fixed ? (
                         <div className="flex flex-wrap justify-center gap-1">
@@ -361,6 +395,14 @@ export function SchedulerDialog({ onSave }: Props) {
           <Button onClick={handleSave}>Save</Button>
         </DialogFooter>
       </DialogContent>
+      <DialogTrigger asChild>
+        <Button
+          size="lg"
+          className="w-40 mt-20 bg-[#ff006e] cursor-pointer hover:bg-[#9e0059]"
+        >
+          Schedule My Week
+        </Button>
+      </DialogTrigger>
     </Dialog>
   );
 }
