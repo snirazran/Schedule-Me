@@ -1,0 +1,132 @@
+/* CalendarOverrides.css */
+
+/* ────────────────────────────────────────────── */
+/*  Toolbar                                    */
+/* ────────────────────────────────────────────── */
+.myCalendar .rbc-toolbar {
+  background: #1f2937;
+  color: #fff;
+}
+.myCalendar .rbc-toolbar button {
+  background: transparent;
+  color: #9ca3af;
+  border: none;
+  padding: 0.5rem 1rem;
+}
+.myCalendar .rbc-toolbar button:hover {
+  color: #fff;
+}
+
+/* ────────────────────────────────────────────── */
+/*  Headers                                    */
+/* ────────────────────────────────────────────── */
+.myCalendar .rbc-header,
+.myCalendar .rbc-time-header.rbc-overflowing,
+.myCalendar .rbc-time-header-content {
+  border: none;
+}
+.myCalendar .rbc-time-header-content {
+  height: 100px;
+  justify-content: center;
+}
+.myCalendar .rbc-header.rbc-today {
+  background-color: #fff;
+}
+
+/* hide the “all day” row */
+.myCalendar .rbc-time-view .rbc-allday-cell {
+  display: none;
+}
+
+/* ────────────────────────────────────────────── */
+/*  Events                                     */
+/* ────────────────────────────────────────────── */
+.myCalendar .rbc-event {
+  background-color: #2563eb;
+  border: none;
+  color: #f9fafb;
+  border-left: 4px solid currentColor !important;
+  padding-left: 10px !important;
+  border-radius: 0 4px 4px 0;
+}
+
+/* ────────────────────────────────────────────── */
+/*  Timeslot sizing                            */
+/* ────────────────────────────────────────────── */
+.myCalendar .rbc-time-content .rbc-timeslot-group {
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
+}
+/* each 15-min slot → 20px */
+.myCalendar .rbc-time-gutter .rbc-time-slot {
+  height: 20px !important;
+}
+/* remove any default grid cell borders */
+.myCalendar .rbc-day-slot .rbc-time-slot,
+.myCalendar .rbc-timeslot-group {
+  border: none;
+}
+
+/* ────────────────────────────────────────────── */
+/*  Outer wrapper reset (no borders on header) */
+/* ────────────────────────────────────────────── */
+.myCalendar .rbc-time-view {
+  border: none;
+  border-radius: 0;
+}
+
+/* ────────────────────────────────────────────── */
+/*  Encapsulating border & rounding on grid    */
+/* ────────────────────────────────────────────── */
+.myCalendar .rbc-time-content {
+  border-left: 1px solid #e5e7eb;
+  border-top: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  overflow: auto;
+}
+
+/* ────────────────────────────────────────────── */
+/*  Gutter spacing + right‐edge divider        */
+/* ────────────────────────────────────────────── */
+.myCalendar .rbc-time-content .rbc-time-gutter {
+  padding: 0 15px;
+  border-right: 1px solid #e5e7eb;
+}
+
+/* ensure no stray left border on gutter */
+.myCalendar .rbc-time-content .rbc-time-gutter,
+.myCalendar .rbc-time-content .rbc-time-gutter .rbc-time-slot {
+  border-left: none;
+}
+
+/* ────────────────────────────────────────────── */
+/*  Day-column dividers                        */
+/* ────────────────────────────────────────────── */
+.myCalendar .rbc-time-content .rbc-day-slot {
+  border-right: 1px solid #e5e7eb;
+}
+.myCalendar .rbc-time-content .rbc-day-slot:last-child {
+  border-right: none;
+}
+
+/* make the .rbc-event-content a column layout */
+.myCalendar .rbc-addons-dnd-resizable {
+  display: flex;
+  flex-direction: column;
+
+  /* ensure the two children (time & title) stack vertically */
+}
+
+/* put the title first */
+.myCalendar .rbc-addons-dnd-resizable .rbc-event-label {
+  order: 2;
+  margin-top: 2px;
+}
+
+.myCalendar .rbc-addons-dnd-resizable .rbc-event-content {
+  order: 1;
+  max-height: fit-content;
+}
